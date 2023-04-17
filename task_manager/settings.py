@@ -40,12 +40,12 @@ INSTALLED_APPS = [
     'accounts',
     # Third party apps
     'phonenumber_field',
+    'django_rest_passwordreset',
     'rest_framework',
     'corsheaders',
     'knox',
     'drf_yasg',
 ]
-
 
 # Rest_framework backend settings
 REST_FRAMEWORK = {
@@ -72,7 +72,6 @@ REST_KNOX = {
     'TOKEN_LIMIT_PER_USER': 2,
     'AUTO_REFRESH': False,
 }
-
 
 # swagger docs settings
 SWAGGER_SETTINGS = {
@@ -171,6 +170,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:4200",
-]
+DEFAULT_FROM_EMAIL = 'kodiugos@gmail.com'
+
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:4200",
+# ]

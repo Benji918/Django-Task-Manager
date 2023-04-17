@@ -52,14 +52,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(_('last name'), max_length=30, blank=False, null=False)
     password = models.CharField(_('password'), blank=False, null=False, max_length=16)
     phone_number = PhoneNumberField(null=False, unique=True)
-    is_active = models.BooleanField(_('active'), default=True)
+    is_active = models.BooleanField(_('active'), default=False)
     is_staff = models.BooleanField(_('staff status'), default=False)
     date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
 
     # New fields for email verification
     email_verified = models.BooleanField(_('email verified'), default=False,
                                          help_text=_('Designates whether the user has verified their email.'))
-    email_verification_token = models.CharField(_('email verification token'), max_length=64, blank=True)
 
     objects = CustomUserManager()
 
