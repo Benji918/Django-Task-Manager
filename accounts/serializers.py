@@ -1,12 +1,14 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+from .validators import validate_strong_password
 
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    confirm_password = serializers.CharField(style={'input_type': 'password'}, write_only=True)
+    password = serializers.CharField(style={'input_type': 'password'}, validators=[validate_strong_password])
+    confirm_password = serializers.CharField(style={'input_type': 'password'}, write_only=True, validators=[validate_strong_password])
 
     class Meta:
         model = User
@@ -34,3 +36,35 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.CharField()
+    password = serializers.CharField(style={'input_type': 'password'})
+
+    def validate(self, data):
+        user = authenticate(**data)
+        if user and user.is_active:
+            return user
+        raise serializers.ValidationError('Incorrect Credential passed')
+
+
+class ChangePasswordSerializer(serializers.ModelSerializer):
+    model = User
+
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, validators=[validate_strong_password])
+    confirm_password = serializers.CharField(required=True, validators=[validate_strong_password])
+
+    def validate(self, data):
+        """
+        Check that new_password and confirm_password match
+        """
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError("The new password do not match.")
+        return data
+
+    class Meta:
+        model = User
+        fields = ['old_password', 'new_password', 'confirm_password']
+        extra_kwargs = {'password': {'write_only': True}}

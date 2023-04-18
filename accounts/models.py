@@ -1,8 +1,37 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from phonenumber_field.modelfields import PhoneNumberField
+from django.dispatch import receiver
+from django.urls import reverse
+from django_rest_passwordreset.signals import reset_password_token_created
+from django.core.mail import send_mail, EmailMultiAlternatives
+from task_manager.settings import DEFAULT_FROM_EMAIL
+
+
+@receiver(reset_password_token_created)
+def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
+    """
+        Handles password reset tokens. Sends an email to the user when a token is created.
+        """
+    context = {
+        'current_user': reset_password_token.user,
+        'first_name': reset_password_token.user.first_name,
+        'email': reset_password_token.user.email,
+        'reset_password_url': f"{instance.request.build_absolute_uri(reverse('password_reset:reset-password-confirm'))}?token={reset_password_token.key}"
+    }
+
+    email_html_message = render_to_string('reset_password.html', context)
+
+    subject = "Password Reset for Task Manager Account"
+    from_email = DEFAULT_FROM_EMAIL
+    to_email = reset_password_token.user.email
+
+    msg = EmailMultiAlternatives(subject, email_html_message, from_email, [to_email])
+    # msg.attach_alternative(email_html_message, "text/html")
+    msg.send()
 
 
 class CustomUserManager(BaseUserManager):
