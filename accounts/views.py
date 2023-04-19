@@ -1,12 +1,15 @@
-from django.contrib.auth import get_user_model
-from django.utils.encoding import smart_str
+from django.contrib.auth import get_user_model, authenticate
+from django.utils.encoding import smart_str, force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
-from knox.models import AuthToken
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
 from drf_yasg.utils import swagger_auto_schema
 from .serializers import UserSerializer, ChangePasswordSerializer, LoginSerializer
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import login
 
 User = get_user_model()
 
@@ -21,45 +24,78 @@ class RegisterView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        token, created = Token.objects.get_or_create(user=user)
         return Response({
             'status': 'success',
             'code': status.HTTP_201_CREATED,
             "user": UserSerializer(user, context=self.get_serializer_context()).data,
-            "token": AuthToken.objects.create(user)[1],
+            "token": token.key,
             "message": "User account created successfully"
         })
 
 
 class LoginView(generics.GenericAPIView):
+    """
+        API view to handle user login.
+        """
     serializer_class = LoginSerializer
+    permission_classes = [permissions.AllowAny, ]
 
     @swagger_auto_schema(operation_summary="Endpoint for a user Login")
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data
+        email = request.data.get('email')
+        password = request.data.get('password')
+        user = authenticate(request, username=email, password=password)
+        if user is not None:
+            login(request, user)
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+                'status': 'success',
+                'code': status.HTTP_200_OK,
+                'user': LoginSerializer(user, context=self.get_serializer_context()).data,
+                'token': token.key,
+                "message": "Logged in successfully"
+
+            })
+        else:
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class LogoutView(generics.GenericAPIView):
+    """
+    API view to handle user logout.
+    """
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    @swagger_auto_schema(operation_summary="Endpoint for a user Logout")
+    def post(self, request):
+        try:
+            # delete the user token
+            token = Token.objects.get(user=request.user)
+            token.delete()
+        except Token.DoesNotExist:
+            return Response({"error": "Token error occurred!"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({
             'status': 'success',
             'code': status.HTTP_200_OK,
-            'user': UserSerializer(user, context=self.get_serializer_context()).data,
-            'token': AuthToken.objects.create(user)[1],
-            "message": "Logged in successful"
-
+            'message': 'Logged out successfully'
         })
 
 
 class ConfirmEmailView(generics.GenericAPIView):
     permission_classes = (permissions.AllowAny,)
 
-    def get(self, request, token, uidb64=None):
+    def get(self, request, token, uidb64):
         # find the user by the token
         try:
-            uid = smart_str(urlsafe_base64_decode(uidb64))
+            uid = force_str(urlsafe_base64_decode(uidb64))
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response({"error": "Invalid user ID"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if default_token_generator.check_token(user, token):
+        if user and default_token_generator.check_token(user, token):
             # update the email_verified  and email_active flag
             user.email_verified = True
             user.is_active = True

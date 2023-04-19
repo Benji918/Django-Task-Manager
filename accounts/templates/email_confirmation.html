@@ -1,15 +1,15 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="utf-8">
-        <title>Confirm Your Email Address</title>
-    </head>
-    <body>
-        <h2>Hello {{ user.first_name }},</h2>
-        <p>Welcome to Task Manager! Please confirm your email address by clicking on the following link:</p>
-        <a href="http://{{ domain }}/accounts/confirm-email/{{ uid }}/{{ token }}">Confirm Email</a>
-        <p>If you didn't sign up for our site, please ignore this email.</p>
-        <p>Best regards,</p>
-        <p>The Smart Learning Team</p>
-    </body>
-</html>
+{% autoescape off %}
+
+Dear {{ user.first_name }} {{user.last_name}},
+Thank you for registering with our website. Please click the link below to activate your account:
+<a href="http://{{ domain }}{% url 'accounts:confirm_email' uidb64=uid token=token %}">Activate Your Account</a>
+This link will expire in 24 hours.
+If you did not register with our website, please disregard this email.
+
+Thank you,
+The Website Team
+
+uidb64 {{uid}}
+token {{token}}
+
+{% endautoescape %}

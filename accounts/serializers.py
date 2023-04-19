@@ -1,14 +1,15 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from rest_framework import serializers
-from django.contrib.auth import authenticate
 from .validators import validate_strong_password
-
+from rest_framework.exceptions import AuthenticationFailed
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(style={'input_type': 'password'}, validators=[validate_strong_password])
-    confirm_password = serializers.CharField(style={'input_type': 'password'}, write_only=True, validators=[validate_strong_password])
+    password = serializers.CharField(style={'input_type': 'password'}, write_only=True,
+                                     validators=[validate_strong_password])
+    confirm_password = serializers.CharField(style={'input_type': 'password'}, write_only=True,
+                                             validators=[validate_strong_password])
 
     class Meta:
         model = User
@@ -17,6 +18,8 @@ class UserSerializer(serializers.ModelSerializer):
             'email': {'required': True},
             'confirm_password': {'required': True},
             'password': {'write_only': True, 'required': True},
+            'first_name': {'required': True},
+            'last_name': {'required': True}
         }
 
     def validate(self, data):
@@ -39,19 +42,27 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.CharField()
+    email = serializers.EmailField(required=True)
     password = serializers.CharField(style={'input_type': 'password'})
 
-    def validate(self, data):
-        user = authenticate(**data)
-        if user and user.is_active:
-            return user
-        raise serializers.ValidationError('Incorrect Credential passed')
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        if email and password:
+            user = get_user_model().objects.filter(email=email).first()
+            if user:
+                if not user.check_password(password):
+                    raise serializers.ValidationError('Invalid password')
+            else:
+                raise serializers.ValidationError('User not found. Invalid credentials!')
+        else:
+            raise serializers.ValidationError('Must include "email" and "password".')
+        attrs['user'] = user
+        return attrs
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):
-    model = User
-
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True, validators=[validate_strong_password])
     confirm_password = serializers.CharField(required=True, validators=[validate_strong_password])

@@ -11,28 +11,6 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from task_manager.settings import DEFAULT_FROM_EMAIL
 
 
-@receiver(reset_password_token_created)
-def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
-    """
-        Handles password reset tokens. Sends an email to the user when a token is created.
-        """
-    context = {
-        'current_user': reset_password_token.user,
-        'first_name': reset_password_token.user.first_name,
-        'email': reset_password_token.user.email,
-        'reset_password_url': f"{instance.request.build_absolute_uri(reverse('password_reset:reset-password-confirm'))}?token={reset_password_token.key}"
-    }
-
-    email_html_message = render_to_string('reset_password.html', context)
-
-    subject = "Password Reset for Task Manager Account"
-    from_email = DEFAULT_FROM_EMAIL
-    to_email = reset_password_token.user.email
-
-    msg = EmailMultiAlternatives(subject, email_html_message, from_email, [to_email])
-    # msg.attach_alternative(email_html_message, "text/html")
-    msg.send()
-
 
 class CustomUserManager(BaseUserManager):
     """
@@ -77,9 +55,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     """
     username = None
     email = models.EmailField(_('email address'), unique=True, blank=False, null=False)
-    first_name = models.CharField(_('first name'), max_length=30, blank=False, null=False)
-    last_name = models.CharField(_('last name'), max_length=30, blank=False, null=False)
-    password = models.CharField(_('password'), blank=False, null=False, max_length=16)
+    first_name = models.CharField(_('first name'), max_length=30, blank=False, null=False, unique=True)
+    last_name = models.CharField(_('last name'), max_length=30, blank=False, null=False, unique=True)
     phone_number = PhoneNumberField(null=False, unique=True)
     is_active = models.BooleanField(_('active'), default=False)
     is_staff = models.BooleanField(_('staff status'), default=False)
