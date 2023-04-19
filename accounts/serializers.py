@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model, authenticate
 from rest_framework import serializers
 from .validators import validate_strong_password
 from rest_framework.exceptions import AuthenticationFailed
+
 User = get_user_model()
 
 
@@ -39,6 +40,12 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+
+
+class UpdateUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('is_superuser', 'is_staff', 'is_active', "date_joined", 'last_login')
 
 
 class LoginSerializer(serializers.Serializer):

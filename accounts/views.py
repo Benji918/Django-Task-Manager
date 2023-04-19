@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import UserSerializer, ChangePasswordSerializer, LoginSerializer
+from .serializers import UserSerializer, ChangePasswordSerializer, LoginSerializer, UpdateUserSerializer
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth import login
 
@@ -15,6 +15,27 @@ User = get_user_model()
 
 
 # Create your views here.
+
+# Admin USER VIEW API VIEW
+class ListUser(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class DeleteDetailUser(generics.DestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+class UpdateDetailUser(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UpdateUserSerializer
+    http_method_names = ['get', 'post', 'put']
+    permission_classes = [permissions.IsAdminUser]
+
+
 class RegisterView(generics.GenericAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny, ]
@@ -110,7 +131,6 @@ class ChangePasswordView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ['get', 'post', 'put']
     model = User
-
 
     @swagger_auto_schema(operation_summary="Endpoint for Change User password")
     def get_object(self, queryset=None):
